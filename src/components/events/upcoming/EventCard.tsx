@@ -125,7 +125,7 @@ const EventCard: React.FC<EventCardProps> = ({
                 src={imagePath || '/assests/image.png'}
                 alt={title}
                 fill
-                className="object-fill transition-transform duration-300 group-hover:scale-105 z-0"
+                className="object-cover transition-transform duration-300 group-hover:scale-105 z-0"
                 sizes="(max-width: 768px) 100vw, 33vw"
                 priority
               />

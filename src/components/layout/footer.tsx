@@ -6,6 +6,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
+import Link from 'next/link';
 import { Youtube, Instagram } from 'lucide-react';
 import { FaLinkedinIn } from 'react-icons/fa';
 import { SiGmail } from 'react-icons/si';
@@ -72,15 +73,18 @@ export function Footer() {
             <div className="w-16 h-0.5 bg-purple-400 mb-6"></div>
             <nav className="space-y-3">
               {NAVIGATION.footer.map((link) => (
-                <motion.a
+                <motion.div
                   key={link.href}
-                  href={link.href}
-                  className="block text-gray-300 hover:text-purple-400 transition-colors duration-200 text-sm"
                   whileHover={{ x: 5 }}
                   transition={{ type: 'spring', stiffness: 300 }}
                 >
-                  {link.label}
-                </motion.a>
+                  <Link
+                    href={link.href}
+                    className="block text-gray-300 hover:text-purple-400 transition-colors duration-200 text-sm"
+                  >
+                    {link.label}
+                  </Link>
+                </motion.div>
               ))}
             </nav>
           </motion.div>

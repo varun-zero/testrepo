@@ -28,6 +28,7 @@ export function HeroSection() {
             width={200}
             height={200}
             className="mx-auto mb-4"
+            style={{ width: 200, height: 'auto' }}
             priority
           />
         </motion.div>

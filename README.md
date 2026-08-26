@@ -8,7 +8,9 @@
   <a href="https://github.com/vcet-nsdc/vcet-nsdc">
     <img alt="repo" src="https://img.shields.io/badge/repo-vcet--nsdc%2Fvcet--nsdc-111827" />
   </a>
-  <img alt="build" src="https://img.shields.io/badge/build-passing-brightgreen" />
+  <a href="https://github.com/vcet-nsdc/vcet-nsdc/actions/workflows/ci.yml">
+    <img alt="CI" src="https://github.com/vcet-nsdc/vcet-nsdc/actions/workflows/ci.yml/badge.svg" />
+  </a>
   <a href="./LICENSE">
     <img alt="license" src="https://img.shields.io/badge/license-MIT-blue" />
   </a>
@@ -44,34 +46,38 @@ This repository powers the public site experience (home, team, events, socials, 
 ## Features
 
 - Landing page sections (hero, about, highlights, quick links)
-- Events: upcoming, ongoing, and past events
-- Team directory pages (BE/SE/TE, developers)
+- Events: upcoming flagship events plus DB-driven past-event listing and per-event detail pages
+- Team directory rendered server-side from the CMS (falls back to bundled static JSON when the CMS is empty)
 - Contact form that stores messages in MongoDB
 - Registration flow:
-  - Team/squad registration
+  - Team/squad registration with configurable dynamic form schemas
   - Payment screenshot upload (stored as base64 in MongoDB)
-  - Transaction ID tracking
-- Admin endpoints protected with HTTP Basic Auth:
-  - View registrations (with domain filter)
-  - Export registrations to Excel (.xlsx)
-  - View payment screenshots by registration ID
+  - Transaction ID tracking with duplicate-payment protection
+- Admin dashboard (`/admin`) protected by NextAuth v5 credentials auth with role-based access control (Faculty Admin / Developer Admin):
+  - Registrations review/approval workflow with audit log
+  - Excel export of registrations
+  - Payment-screenshot viewer (session-authenticated, private cache headers)
+  - CMS management for team members and content
+  - Event & theme management, settings, users, system health
 - Certificates API:
-  - Search certificates by email
-  - Create, update (download/share tracking), and delete certificates
+  - Public certificate verification lookup by email (rate-limited)
+  - Admin-only create/update/delete via the `certificate:manage` permission
 
 ## Tech Stack
 
 - **Next.js (App Router)** + **React**
-- **TypeScript**
-- **Tailwind CSS**
+- **TypeScript** (strict)
+- **Tailwind CSS v4**
 - **MongoDB** + **Mongoose**
+- **NextAuth v5** (credentials provider, JWT sessions, RBAC)
 - **React Hook Form** + **Zod** (forms & validation)
 - **Framer Motion** (animation)
-- **xlsx** and **jsPDF** (exports/reporting utilities)
+- **ExcelJS** (Excel export)
+- **Nodemailer** + **Cloudinary** (email notifications & media)
 
 ## Prerequisites
 
-- Node.js 18.18+ (or newer)
+- Node.js 20.9+ (enforced via `engines` in `package.json`)
 - npm (comes with Node.js)
 - A MongoDB instance (local or cloud)
 
@@ -90,19 +96,23 @@ This repository powers the public site experience (home, team, events, socials, 
    npm install
    ```
 
-3. Create a local environment file
+3. Create a local environment file (see `.env.example` for the full list)
 
    ```bash
-   # .env.local
-   MONGODB_URI="mongodb+srv://<user>:<pass>@<cluster>/<db>?retryWrites=true&w=majority"
+   cp .env.example .env
+   ```
 
-   # Recommended (admin API protection)
-   ADMIN_USERNAME="your-admin-username"
-   ADMIN_PASSWORD="your-admin-password"
+   Minimum required values:
+
+   ```bash
+   # .env
+   MONGODB_URI="mongodb+srv://<user>:<pass>@<cluster>/<db>?retryWrites=true&w=majority"
+   AUTH_SECRET="generate-with-openssl-rand-base64-32"
 
    # Optional
    NEXT_PUBLIC_APP_URL="http://localhost:3000"
-   NEXT_PUBLIC_API_URL="/api"
+   SMTP_HOST="" SMTP_USER="" SMTP_PASS="" SMTP_PORT=587
+   CLOUDINARY_CLOUD_NAME="" CLOUDINARY_API_KEY="" CLOUDINARY_API_SECRET=""
    GOOGLE_SITE_VERIFICATION=""
    LOGGING_ENDPOINT=""
    ```
@@ -122,10 +132,20 @@ This repository powers the public site experience (home, team, events, socials, 
 ### Common scripts
 
 ```bash
-npm run dev
-npm run build
-npm run start
-npm run lint
+npm run dev            # start dev server (Turbopack)
+npm run build          # production build
+npm run start          # serve production build
+npm run lint           # ESLint
+npm run typecheck      # tsc --noEmit
+npm run format         # Prettier (write)
+npm run format:check   # Prettier (CI check)
+
+# Database utilities (all read .env, fail fast without it)
+npm run seed:admin     # idempotently seed the first admin from SEED_ADMIN_* env vars
+npm run create:user    # create or update an admin user
+npm run migrate:events # import legacy events into MongoDB (add --force to overwrite edits)
+npm run migrate:cms    # import CMS content
+npm run migrate:proofs # move stored payment proofs to Cloudinary
 ```
 
 ### Registration (UI)
@@ -135,21 +155,16 @@ npm run lint
 - Upload a payment screenshot
 - Submit to create a registration entry in MongoDB
 
-### Admin (API)
+### Admin (UI & API)
 
-Admin endpoints under `/api/admin/*` require HTTP Basic Auth.
+The admin dashboard lives at `/admin` and requires signing in at `/admin/login`
+with a seeded admin account (NextAuth v5 credentials provider, JWT sessions,
+8-hour expiry, account lockout after repeated failures).
 
-Example: generate the Basic token
-
-```bash
-node -e "console.log(Buffer.from(process.env.U+':'+process.env.P).toString('base64'))"
-```
-
-Then use it as:
-
-```bash
-curl -H "Authorization: Basic <base64(username:password)>" http://localhost:3000/api/admin/registrations
-```
+All `/api/admin/*` endpoints require an authenticated session with the
+appropriate permission (see `src/config/permissions.ts`). Requests from the
+dashboard automatically include the session cookie; external API consumers must
+authenticate through the Auth.js credentials flow first.
 
 ## Screenshots
 
@@ -246,11 +261,12 @@ Body (JSON):
 
 ### GET /api/certificates/:id
 
-Fetches a certificate by MongoDB document ID.
+Fetches a certificate by MongoDB document ID. Admin-only (`certificate:manage`).
 
 ### PUT /api/certificates/:id
 
 Updates a certificate (download/share tracking) and optionally stores `imageData`.
+Admin-only; `imageData` must be a base64 image under 2MB.
 
 Body (JSON):
 
@@ -266,45 +282,31 @@ Body (JSON):
 
 ### GET /api/admin/registrations?domain=...
 
-Returns registrations (excluding the screenshot blob). Requires Basic Auth.
+Returns registrations (excluding the screenshot blob). Requires an admin session with `registration:read`.
 
 - `domain` (optional): domain name, or `all`
 
-Example:
-
-```bash
-curl -H "Authorization: Basic <token>" "http://localhost:3000/api/admin/registrations?domain=all"
-```
-
 ### GET /api/admin/export?domain=...
 
-Downloads an Excel export of registrations. Requires Basic Auth.
-
-Example:
-
-```bash
-curl -L -H "Authorization: Basic <token>" "http://localhost:3000/api/admin/export?domain=all" --output registrations.xlsx
-```
+Downloads an Excel export of registrations (capped at 5000 rows). Requires `registration:export`.
 
 ### GET /api/admin/screenshot/:id
 
-Serves the stored payment screenshot for a registration. Requires Basic Auth.
-
-Notes:
-
-- You can also pass `?auth=<base64(username:password)>` for convenience when opening in a new tab.
+Serves the stored payment screenshot for a registration. Requires `registration:read`; responses are cached privately only.
 
 ## Configuration
 
-Environment variables:
+Environment variables (see `.env.example` for the complete list):
 
-- `MONGODB_URI` (required): MongoDB connection string used by the API routes
-- `ADMIN_USERNAME` (recommended): Basic Auth username for `/api/admin/*`
-- `ADMIN_PASSWORD` (recommended): Basic Auth password for `/api/admin/*`
+- `MONGODB_URI` (required): MongoDB connection string
+- `AUTH_SECRET` (required): Auth.js session signing secret (`openssl rand -base64 32`)
 - `NEXT_PUBLIC_APP_URL` (optional): public app URL used for metadata/config
 - `NEXT_PUBLIC_API_URL` (optional): API base URL (defaults to `/api`)
+- `SMTP_HOST` / `SMTP_USER` / `SMTP_PASS` / `SMTP_PORT` / `SMTP_FROM`: email notifications (optional; falls back to `EMAIL_SERVER_*`)
+- `CLOUDINARY_CLOUD_NAME` / `CLOUDINARY_API_KEY` / `CLOUDINARY_API_SECRET`: media uploads (optional until media migration is run)
 - `GOOGLE_SITE_VERIFICATION` (optional): Google Search Console verification token
 - `LOGGING_ENDPOINT` (optional): remote logging endpoint (used in production)
+- `SKIP_ENV_VALIDATION` (optional): set to `1` for Docker/CI builds without secrets
 
 ## Folder Structure
 
@@ -312,26 +314,24 @@ Environment variables:
 .
 ├─ public/
 │  ├─ assests/            # Images and logos
-│  ├─ staticdata/         # JSON data used by pages/components
-│  └─ uploads/            # Uploaded files (if used by older flows)
+│  └─ staticdata/         # Fallback JSON data used by pages/components
+├─ scripts/               # DB seed/migration utilities (.mjs)
 ├─ src/
 │  ├─ app/                # Next.js App Router pages + API routes
 │  ├─ components/         # UI and feature components
-│  ├─ data/               # Local TS data sources
-│  ├─ hooks/              # Reusable hooks
-│  ├─ lib/                # Shared utilities (db, auth, config)
+│  ├─ config/             # Roles & permissions catalogue
+│  ├─ lib/                # Shared utilities (db, auth, sanitize, rate-limit)
 │  ├─ models/             # Mongoose models
+│  ├─ server/             # Services, validation schemas, HTTP helpers
 │  └─ types/              # Shared TypeScript types
 └─ package.json
 ```
 
 ## Roadmap
 
-- Add GitHub Actions CI (build, lint, typecheck) and replace the build badge with a workflow badge
 - Add integration tests for API routes (registration, admin export, certificates)
-- Add rate limiting for public APIs (contact/register) to reduce spam/abuse
-- Add admin UI improvements (search, pagination, export filters)
-- Improve observability (structured logs + production monitoring)
+- Re-check admin session roles against the DB on each request (currently cached in the JWT for up to 8 hours)
+- Admin UI improvements (search, pagination, export filters)
 
 ## Contributing
 

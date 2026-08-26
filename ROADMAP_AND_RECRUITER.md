@@ -22,17 +22,13 @@
 
 **1. Remove hardcoded credentials:**
 ```typescript
-// BEFORE (admin-auth.ts):
-const ADMIN_USERNAME = process.env.ADMIN_USERNAME || 'NSDC@AIDS';
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'VCETNSDC@AIDS';
-
-// AFTER:
-const ADMIN_USERNAME = process.env.ADMIN_USERNAME;
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
-
-if (!ADMIN_USERNAME || !ADMIN_PASSWORD) {
-  throw new Error('ADMIN_USERNAME and ADMIN_PASSWORD must be set in environment');
-}
+// BEFORE (admin-auth.ts) — literal fallback credentials were committed here and
+// have been scrubbed from this document. The legacy Basic Auth module itself
+// was removed; authentication is now handled exclusively by NextAuth v5
+// (credentials provider + JWT sessions, see src/auth.ts).
+//
+// If the old ADMIN_USERNAME/ADMIN_PASSWORD values were ever deployed to a live
+// environment, treat them as compromised and rotate everywhere they were reused.
 ```
 
 **2. Add rate limiting:**

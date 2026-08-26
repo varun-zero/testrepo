@@ -96,8 +96,19 @@ async function main() {
   }
 
   const all = [...UPCOMING, ...past];
+  const force = process.argv.includes('--force');
   let created = 0;
+  let skipped = 0;
   for (const ev of all) {
+    // Without --force, never overwrite an event that already exists: admins may
+    // have edited it in the dashboard after the first migration run.
+    if (!force) {
+      const existing = await EventModel.exists({ slug: ev.slug });
+      if (existing) {
+        skipped += 1;
+        continue;
+      }
+    }
     const res = await EventModel.updateOne(
       { slug: ev.slug },
       { $set: { ...ev, themeId: theme._id } },
@@ -106,7 +117,10 @@ async function main() {
     if (res.upsertedCount) created += 1;
   }
 
-  console.log(`[migrate-events] Processed ${all.length} events (${created} newly created).`);
+  console.log(
+    `[migrate-events] Processed ${all.length} events (${created} newly created, ${skipped} skipped).` +
+      (skipped > 0 ? ' Re-run with --force to overwrite existing events.' : '')
+  );
 }
 
 main()

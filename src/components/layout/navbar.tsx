@@ -30,7 +30,8 @@ export function Navbar() {
             alt="VCET NSDC logo"
             width={180}
             height={48}
-            className="h-12 w-auto object-contain"
+            className="object-contain"
+            style={{ height: 48, width: 'auto' }}
             priority
           />
         </Link>

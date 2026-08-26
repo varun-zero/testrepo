@@ -49,7 +49,7 @@ export function EventModal({ event, onClose, stockImages }: EventModalProps) {
         onClick={onClose}
       >
         <motion.div
-          className="relative w-full max-w-4xl max-h-[80vh] rounded-lg border border-white/10 modal-smooth-scroll"
+          className="relative w-full max-w-5xl max-h-[85vh] rounded-xl border border-white/10 modal-smooth-scroll"
           style={{ backgroundColor: 'rgba(23, 10, 36, 0.7)', backdropFilter: 'blur(12px)' }}
           initial={{ scale: 0.8, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
@@ -64,11 +64,11 @@ export function EventModal({ event, onClose, stockImages }: EventModalProps) {
           >
             <X className="w-6 h-6" />
           </button>
-              <div className="p-6 text-left">
-              <h3 className="text-fuchsia-100 text-lg font-heading mb-4">
+              <div className="p-6 sm:p-8 text-left">
+              <h3 className="text-fuchsia-100 text-2xl font-heading mb-6">
                 {event.title} — Event Details
               </h3>
-              <div className="grid sm:grid-cols-2 gap-4 text-sm text-fuchsia-200 mb-4">
+              <div className="grid sm:grid-cols-2 gap-4 sm:gap-6 text-base text-fuchsia-200 mb-6">
                 <div className="space-y-1">
                   <p className="text-fuchsia-300 font-body">Date & Time</p>
                   <p className="text-fuchsia-100 font-heading">
@@ -86,8 +86,8 @@ export function EventModal({ event, onClose, stockImages }: EventModalProps) {
               </div>
 
               <div className="mb-4">
-                <p className="text-fuchsia-300 text-sm mb-1.5 font-body">Overview</p>
-                <div className="space-y-2 text-fuchsia-100 text-sm leading-relaxed font-body">
+                <p className="text-fuchsia-300 text-base mb-2 font-body">Overview</p>
+                <div className="space-y-3 text-fuchsia-100 text-base leading-relaxed font-body">
                   <p>{event.description}</p>
                   {event.about && <p>{event.about}</p>}
                 </div>
@@ -96,18 +96,18 @@ export function EventModal({ event, onClose, stockImages }: EventModalProps) {
               {event.highlights && event.highlights.length > 0 && (
                 <div className="grid sm:grid-cols-2 gap-6 mb-4">
                   <div>
-                    <p className="text-fuchsia-300 text-sm mb-1.5 font-body">Highlights</p>
-                    <ul className="space-y-1 list-disc list-inside">
+                    <p className="text-fuchsia-300 text-base mb-2 font-body">Highlights</p>
+                    <ul className="space-y-2 list-disc list-inside">
                       {event.highlights.slice(0, Math.ceil(event.highlights.length / 2)).map((highlight, index) => (
-                        <li key={index} className="text-fuchsia-100 text-sm font-body">{highlight}</li>
+                        <li key={index} className="text-fuchsia-100 text-base font-body">{highlight}</li>
                       ))}
                     </ul>
                   </div>
                   <div>
-                    <p className="text-fuchsia-300 text-sm mb-1.5 font-body">Awards</p>
-                    <ul className="space-y-1 list-disc list-inside">
+                    <p className="text-fuchsia-300 text-base mb-2 font-body">Awards</p>
+                    <ul className="space-y-2 list-disc list-inside">
                       {event.highlights.slice(Math.ceil(event.highlights.length / 2)).map((highlight, index) => (
-                        <li key={index} className="text-fuchsia-100 text-sm font-body">{highlight}</li>
+                        <li key={index} className="text-fuchsia-100 text-base font-body">{highlight}</li>
                       ))}
                     </ul>
                   </div>

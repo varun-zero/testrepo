@@ -1,13 +1,8 @@
 "use client";
-import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-// Using standard img to avoid Next image domain config for now
-// import { FaInstagram, FaLinkedin } from "react-icons/fa";
 import ProfileCard from "./ProfileCard";
-// import ShaderBackground from "../shader-background";
 
-// Define type for JSON structure
-interface TeamMember {
+export interface TeamMember {
   id: number;
   name: string;
   position: string;
@@ -17,12 +12,12 @@ interface TeamMember {
   photo: string;
 }
 
-// Load team JSON at runtime to avoid importing from public/
+interface TeamsProps {
+  beTeam?: TeamMember[];
+  teTeam?: TeamMember[];
+}
 
-const Teams: React.FC = () => {
-  const [beTeam, setBeTeam] = useState<TeamMember[]>([]);
-  const [teTeam, setTeTeam] = useState<TeamMember[]>([]);
-
+const Teams: React.FC<TeamsProps> = ({ beTeam = [], teTeam = [] }) => {
   // Animation variants
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -57,24 +52,8 @@ const Teams: React.FC = () => {
     },
   };
 
-  useEffect(() => {
-    Promise.all([
-      fetch('/staticdata/BE.json').then(r => r.json()).catch(() => []),
-      fetch('/staticdata/TE.json').then(r => r.json()).catch(() => []),
-    ])
-    .then(([be, te]) => {
-      setBeTeam(Array.isArray(be) ? be : []);
-      setTeTeam(Array.isArray(te) ? te : []);
-    })
-    .catch(() => {
-      setBeTeam([]);
-      setTeTeam([]);
-    });
-  }, []);
-
   return (
-    <div className="relativ
-    e py-12 overflow-hidden">
+    <div className="relative py-12 overflow-hidden">
       <motion.div 
         className="relative z-10 mt-20"
         variants={containerVariants}

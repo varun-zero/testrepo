@@ -62,7 +62,7 @@ export function ImageCarousel({ images, eventTitle, isVisible }: ImageCarouselPr
 
   return (
     <>
-    <div className="relative h-64 md:h-80 rounded-lg overflow-hidden bg-gradient-to-br from-purple-100/20 to-violet-100/20">
+    <div className="relative h-64 md:h-96 rounded-lg overflow-hidden bg-gradient-to-br from-purple-100/20 to-violet-100/20">
       {/* Loading indicator */}
       {isLoading && (
         <div className="absolute inset-0 flex items-center justify-center z-10">
@@ -104,17 +104,51 @@ export function ImageCarousel({ images, eventTitle, isVisible }: ImageCarouselPr
                 handleMediaError(images[currentImageIndex] || "")
               }}
               loading="lazy"
-              style={{ objectFit: "contain" }}
+              style={{ objectFit: "contain", width: "auto", height: "auto" }}
               unoptimized
             />
           )}
-          
+
           {/* Click overlay */}
           <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all duration-300 flex items-center justify-center">
             <ZoomIn className="w-8 h-8 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
           </div>
         </motion.div>
       </AnimatePresence>
+
+      {/* Back / forward navigation arrows */}
+      {images.length > 1 && (
+        <>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation()
+              setCurrentImageIndex((prev) => (prev - 1 + images.length) % images.length)
+              setIsLoading(true)
+            }}
+            aria-label="Previous photo"
+            className="absolute left-2 top-1/2 -translate-y-1/2 z-20 p-2 rounded-full bg-black/50 hover:bg-black/75 text-white shadow-lg transition-all duration-200 hover:scale-110"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+          </button>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation()
+              setCurrentImageIndex((prev) => (prev + 1) % images.length)
+              setIsLoading(true)
+            }}
+            aria-label="Next photo"
+            className="absolute right-2 top-1/2 -translate-y-1/2 z-20 p-2 rounded-full bg-black/50 hover:bg-black/75 text-white shadow-lg transition-all duration-200 hover:scale-110"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
+        </>
+      )}
 
       <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-2">
         {images.map((_, index) => (
@@ -124,6 +158,7 @@ export function ImageCarousel({ images, eventTitle, isVisible }: ImageCarouselPr
               setCurrentImageIndex(index)
               setIsLoading(true)
             }}
+            aria-label={`Go to image ${index + 1} of ${images.length}`}
             className={`w-2 h-2 rounded-full transition-all duration-300 ${
               index === currentImageIndex ? "bg-purple-400 scale-125" : "bg-white/50 hover:bg-white/75"
             }`}
@@ -177,7 +212,7 @@ export function ImageCarousel({ images, eventTitle, isVisible }: ImageCarouselPr
                   className="w-full h-full max-h-[90vh] object-contain"
                   width={1200}
                   height={900}
-                  style={{ objectFit: "contain" }}
+                  style={{ objectFit: "contain", width: "auto", height: "auto", maxWidth: '90vw', maxHeight: '90vh' }}
                   unoptimized
                 />
               )}
@@ -191,6 +226,7 @@ export function ImageCarousel({ images, eventTitle, isVisible }: ImageCarouselPr
                     e.stopPropagation()
                     setCurrentImageIndex((prev) => (prev - 1 + images.length) % images.length)
                   }}
+                  aria-label="Previous image"
                   className="absolute left-4 top-1/2 transform -translate-y-1/2 p-2 bg-black/50 hover:bg-black/70 text-white rounded-full transition-colors duration-200"
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -202,6 +238,7 @@ export function ImageCarousel({ images, eventTitle, isVisible }: ImageCarouselPr
                     e.stopPropagation()
                     setCurrentImageIndex((prev) => (prev + 1) % images.length)
                   }}
+                  aria-label="Next image"
                   className="absolute right-4 top-1/2 transform -translate-y-1/2 p-2 bg-black/50 hover:bg-black/70 text-white rounded-full transition-colors duration-200"
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

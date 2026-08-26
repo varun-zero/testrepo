@@ -1,6 +1,9 @@
 import type { Metadata } from 'next';
 import Events from '@/components/events/Events';
 import { APP_CONFIG } from '@/lib/constants';
+import { getPastEventsForDisplay, type PastEventView } from '@/lib/event-display';
+
+export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
   title: 'Events & Hackathons',
@@ -14,10 +17,19 @@ export const metadata: Metadata = {
   },
 };
 
-export default function EventsPage() {
+export default async function EventsPage() {
+  let pastEvents: PastEventView[] = [];
+  try {
+    pastEvents = await getPastEventsForDisplay();
+  } catch {
+    // DB unavailable — the section falls back to its curated sample content.
+    pastEvents = [];
+  }
+
   return (
     <div>
-      <Events />
+      <h1 className="sr-only">Events &amp; Hackathons by VCET NSDC</h1>
+      <Events pastEvents={pastEvents} />
     </div>
   );
 }
