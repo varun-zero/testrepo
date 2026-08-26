@@ -21,6 +21,7 @@ export interface IRegistration extends Document {
     email: string;
   }[];
   transactionId: string;
+  transactionKey?: string;
   paymentScreenshot: string;
   paymentProof?: Types.ObjectId;
   payment: {
@@ -54,6 +55,7 @@ const RegistrationSchema = new Schema<IRegistration>({
     }
   ],
   transactionId: { type: String, default: 'FREE-REGISTRATION' },
+  transactionKey: { type: String },
   paymentScreenshot: { type: String, default: '' },
   paymentProof: { type: Schema.Types.ObjectId, ref: 'MediaAsset' },
   payment: {
@@ -75,6 +77,7 @@ RegistrationSchema.index({ status: 1, createdAt: -1 });
 RegistrationSchema.index({ 'leader.email': 1 });
 RegistrationSchema.index({ eventId: 1, status: 1 });
 RegistrationSchema.index({ 'payment.status': 1 });
+RegistrationSchema.index({ transactionKey: 1 }, { unique: true, sparse: true });
 
 const Registration = (mongoose.models.Registration || mongoose.model<IRegistration>('Registration', RegistrationSchema)) as mongoose.Model<IRegistration>;
 export default Registration;

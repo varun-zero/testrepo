@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { Types } from 'mongoose';
 import { connectToDatabase } from '@/lib/mongodb';
 import { rateLimit } from '@/lib/rate-limit';
@@ -19,20 +20,28 @@ export async function POST(req: NextRequest) {
 
     let requiresPayment = false;
     let eventTitle = 'Event';
+    let eventFound = false;
 
     if (eventId && Types.ObjectId.isValid(eventId)) {
       const ev = await EventModel.findById(eventId).lean();
       if (ev) {
+        eventFound = true;
         eventTitle = ev.title;
         requiresPayment = ev.registration?.requiresPayment ?? ((ev.registration?.fee ?? 0) > 0);
       }
     }
 
-    // Collect ALL submitted form entries into a customData dictionary (excluding payment screenshot)
+    if (!eventFound) {
+      return NextResponse.json({ error: 'A valid event reference is required' }, { status: 400 });
+    }
+
+    // Collect submitted text entries into a customData dictionary
+    // (non-string values such as stray files are ignored)
     const customData: Record<string, unknown> = {};
     for (const [key, value] of rawFormData.entries()) {
-      if (key === 'paymentScreenshot') continue;
-      customData[key] = typeof value === 'string' ? sanitizeText(value) : value;
+      if (typeof value === 'string') {
+        customData[key] = sanitizeText(value);
+      }
     }
 
     // Helper to retrieve value matching various candidate keys
@@ -48,6 +57,12 @@ export async function POST(req: NextRequest) {
     const domain = getVal('domain', 'category', 'path') || 'General';
     const leaderFullName = getVal('leaderFullName', 'leader_name', 'fullName', 'full_name', 'name') || 'Participant';
     const rawLeaderEmail = getVal('leaderEmail', 'leader_email', 'email', 'email_address', 'emailid', 'email_id', 'contact_email', 'user_email', 'mail');
+    if (rawLeaderEmail) {
+      const emailCheck = z.string().trim().email().max(320).safeParse(rawLeaderEmail);
+      if (!emailCheck.success) {
+        return NextResponse.json({ error: 'A valid leader email is required' }, { status: 400 });
+      }
+    }
     const leaderEmail = rawLeaderEmail ? sanitizeEmail(rawLeaderEmail) : 'no-email@registration.local';
     const leaderPhone = getVal('leaderPhone', 'leader_phone', 'phone', 'contact', 'mobile') || 'N/A';
     const leaderCollege = getVal('leaderCollege', 'leader_college', 'college', 'institute') || 'N/A';
@@ -55,6 +70,21 @@ export async function POST(req: NextRequest) {
 
     if (requiresPayment && !transactionId) {
       return NextResponse.json({ error: 'Transaction ID is required for paid registrations' }, { status: 400 });
+    }
+
+    // Duplicate-payment guard: the same transaction/UPI reference cannot be
+    // reused for a second registration in the same event (also enforced by a
+    // unique sparse index on transactionKey).
+    let transactionKey: string | undefined;
+    if (requiresPayment && eventId && transactionId) {
+      transactionKey = `${eventId}:${transactionId.toLowerCase().trim()}`;
+      const duplicate = await Registration.findOne({ transactionKey }).lean();
+      if (duplicate) {
+        return NextResponse.json(
+          { error: 'This transaction ID has already been used for a registration.' },
+          { status: 409 }
+        );
+      }
     }
 
     // Handle payment screenshot file
@@ -93,7 +123,7 @@ export async function POST(req: NextRequest) {
 
     // Save registration document
     const newRegistration = new Registration({
-      ...(eventId && Types.ObjectId.isValid(eventId) ? { eventId: new Types.ObjectId(eventId) } : {}),
+      eventId: new Types.ObjectId(eventId as string),
       squadName,
       domain,
       leader: {
@@ -104,6 +134,7 @@ export async function POST(req: NextRequest) {
       },
       members,
       transactionId,
+      ...(transactionKey ? { transactionKey } : {}),
       paymentScreenshot,
       formData: customData,
       status: 'pending',
@@ -129,8 +160,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: true, message: `Registration for ${eventTitle} successful!` }, { status: 201 });
   } catch (error: unknown) {
     console.error('Registration API Error:', error);
-    if (error instanceof Error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+    if (typeof error === 'object' && error !== null && 'code' in error && (error as { code?: number }).code === 11000) {
+      return NextResponse.json(
+        { error: 'This transaction ID has already been used for a registration.' },
+        { status: 409 }
+      );
     }
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }

@@ -11,6 +11,7 @@ import { Footer } from '@/components/layout/footer';
 import ShaderBackground from '@/components/shader-background';
 import { APP_CONFIG, CONTACT_INFO } from '@/lib/constants';
 import { AuthProvider } from '@/components/providers/AuthProvider';
+import { safeJsonLd } from '@/lib/jsonld';
 import './globals.css';
 import SocialSidebar from '@/components/socialsidebar';
 
@@ -176,11 +177,11 @@ export default function RootLayout({
         {/* Schema.org JSON-LD Scripts */}
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLdOrganization) }}
+          dangerouslySetInnerHTML={{ __html: safeJsonLd(jsonLdOrganization) }}
         />
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLdCollege) }}
+          dangerouslySetInnerHTML={{ __html: safeJsonLd(jsonLdCollege) }}
         />
       </head>
       <body

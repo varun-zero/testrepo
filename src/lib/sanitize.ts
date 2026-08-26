@@ -30,3 +30,11 @@ export function sanitizeText(value: unknown, maxLength = 2000): string {
 export function sanitizeEmail(value: unknown): string {
   return sanitizeText(value, 254).toLowerCase();
 }
+
+/**
+ * Escapes user-supplied text for safe interpolation inside a RegExp so that
+ * search inputs can never inject quantifiers/groups (ReDoS / filter injection).
+ */
+export function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}

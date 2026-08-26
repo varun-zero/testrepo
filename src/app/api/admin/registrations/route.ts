@@ -2,8 +2,8 @@ import { NextRequest } from 'next/server';
 import { Types } from 'mongoose';
 import { connectToDatabase } from '@/lib/mongodb';
 import Registration from '@/models/Registration';
-import EventModel from '@/models/EventModel';
 import { requirePermission } from '@/lib/rbac';
+import { escapeRegExp } from '@/lib/sanitize';
 import { getPagination, paginated, handleRouteError } from '@/server/http';
 import type { FilterQuery } from 'mongoose';
 import type { IRegistration } from '@/models/Registration';
@@ -14,7 +14,6 @@ export async function GET(req: NextRequest) {
 
   try {
     await connectToDatabase();
-    void EventModel;
 
     const { searchParams } = new URL(req.url);
     const eventId = searchParams.get('eventId');
@@ -32,7 +31,7 @@ export async function GET(req: NextRequest) {
     if (domain && domain !== 'all') filter.domain = domain;
     if (status && status !== 'all') filter.status = status;
     if (search && search.trim()) {
-      const q = search.trim();
+      const q = escapeRegExp(search.trim().slice(0, 200));
       filter.$or = [
         { squadName: { $regex: q, $options: 'i' } },
         { 'leader.fullName': { $regex: q, $options: 'i' } },

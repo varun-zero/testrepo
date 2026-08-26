@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
 import { connectToDatabase } from '@/lib/mongodb'
 import { rateLimit } from '@/lib/rate-limit'
 import { sanitizeText, sanitizeEmail } from '@/lib/sanitize'
@@ -21,6 +22,13 @@ export async function POST(req: NextRequest) {
     if (!name || !email || !contact || !messageBody) {
       return NextResponse.json(
         { success: false, message: 'All fields are required' },
+        { status: 400 }
+      )
+    }
+
+    if (!z.string().email().safeParse(email).success) {
+      return NextResponse.json(
+        { success: false, message: 'Please provide a valid email address' },
         { status: 400 }
       )
     }

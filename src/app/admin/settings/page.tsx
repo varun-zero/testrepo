@@ -12,7 +12,7 @@ const SCOPE_INFO: Record<Scope, { label: string; desc: string; fields: { key: st
     desc: "Operational settings (UPI ID, registration status, contact info)",
     fields: [
       { key: "upiId", label: "UPI ID", hint: "e.g. admin@vcet" },
-      { key: "qrCodeUrl", label: "Payment QR Code Image URL", hint: "e.g. /assests/jishantqr.png or image URL" },
+      { key: "qrCodeUrl", label: "Payment QR Code Image URL", hint: "Image URL or /path/to/qr.png served from this site" },
       { key: "registrationOpen", label: "Registration Open", type: "boolean" },
       { key: "contactEmail", label: "Contact Email", type: "email" },
       { key: "contactPhone", label: "Contact Phone" },

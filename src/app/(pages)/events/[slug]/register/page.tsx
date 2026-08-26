@@ -50,7 +50,7 @@ async function getEventRegistrationData(slug: string): Promise<{
 
   const businessSettings = await getSettings("business");
   const upiId = (businessSettings?.upiId as string) ?? null;
-  const qrCodeUrl = (businessSettings?.qrCodeUrl as string) || "/assests/jishantqr.png";
+  const qrCodeUrl = (businessSettings?.qrCodeUrl as string) || null;
 
   const schemaDoc = raw.registration?.formSchemaId as unknown as {
     _id: { toString(): string };

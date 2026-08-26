@@ -1,17 +1,70 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
+import { isValidObjectId } from 'mongoose'
 import { connectToDatabase } from '@/lib/mongodb'
+import { requirePermission } from '@/lib/rbac'
 import Certificate from '@/models/Certificate'
 
-// GET - Get certificate by ID
+// 2 MB cap on the base64 string (~1.5 MB binary) prevents unbounded DB writes.
+const MAX_IMAGE_DATA_LENGTH = 2 * 1024 * 1024
+
+const updateSchema = z.object({
+  action: z.enum(['download', 'share']).optional(),
+  imageData: z
+    .string()
+    .max(MAX_IMAGE_DATA_LENGTH, 'imageData exceeds maximum allowed size')
+    .regex(/^data:image\/(png|jpeg|jpg|webp);base64,[A-Za-z0-9+/=]+$/, 'imageData must be a base64-encoded image')
+    .optional(),
+})
+
+function shape(certificate: {
+  _id: unknown
+  certificateNumber: string
+  name: string
+  product: string
+  email: string
+  date: unknown
+  status: string
+  downloadCount?: number
+  shareCount?: number
+  createdAt?: Date
+}) {
+  return {
+    id: certificate._id,
+    certificateNumber: certificate.certificateNumber,
+    name: certificate.name,
+    product: certificate.product,
+    email: certificate.email,
+    date: certificate.date,
+    status: certificate.status,
+    downloadCount: certificate.downloadCount,
+    shareCount: certificate.shareCount,
+    createdAt: certificate.createdAt,
+  }
+}
+
+async function resolveId(params: Promise<{ id: string }>) {
+  const { id } = await params
+  if (!isValidObjectId(id)) return null
+  return id
+}
+
+// GET - Get certificate by ID (admin only; returns PII)
 export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const guard = await requirePermission('certificate:manage')
+  if (guard.error) return guard.error
+
   try {
-    const { id } = await params
+    const id = await resolveId(params)
+    if (!id) {
+      return NextResponse.json({ success: false, message: 'Certificate not found' }, { status: 404 })
+    }
 
     await connectToDatabase()
-    
+
     const certificate = await Certificate.findById(id)
 
     if (!certificate) {
@@ -23,18 +76,7 @@ export async function GET(
 
     return NextResponse.json({
       success: true,
-      certificate: {
-        id: certificate._id,
-        certificateNumber: certificate.certificateNumber,
-        name: certificate.name,
-        product: certificate.product,
-        email: certificate.email,
-        date: certificate.date,
-        status: certificate.status,
-        downloadCount: certificate.downloadCount,
-        shareCount: certificate.shareCount,
-        createdAt: certificate.createdAt
-      }
+      certificate: shape(certificate),
     })
   } catch (error) {
     console.error('Error fetching certificate:', error)
@@ -45,18 +87,31 @@ export async function GET(
   }
 }
 
-// PUT - Update certificate (download/share tracking)
+// PUT - Update certificate (admin only)
 export async function PUT(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const guard = await requirePermission('certificate:manage')
+  if (guard.error) return guard.error
+
   try {
-    const { id } = await params
-    const data = await req.json()
-    const { action, imageData } = data
+    const parsed = updateSchema.safeParse(await req.json())
+    if (!parsed.success) {
+      return NextResponse.json(
+        { success: false, message: 'Invalid update payload', issues: parsed.error.flatten().fieldErrors },
+        { status: 400 }
+      )
+    }
+    const { action, imageData } = parsed.data
+
+    const id = await resolveId(params)
+    if (!id) {
+      return NextResponse.json({ success: false, message: 'Certificate not found' }, { status: 404 })
+    }
 
     await connectToDatabase()
-    
+
     const certificate = await Certificate.findById(id)
 
     if (!certificate) {
@@ -97,18 +152,7 @@ export async function PUT(
 
     return NextResponse.json({
       success: true,
-      certificate: {
-        id: updatedCertificate._id,
-        certificateNumber: updatedCertificate.certificateNumber,
-        name: updatedCertificate.name,
-        product: updatedCertificate.product,
-        email: updatedCertificate.email,
-        date: updatedCertificate.date,
-        status: updatedCertificate.status,
-        downloadCount: updatedCertificate.downloadCount,
-        shareCount: updatedCertificate.shareCount,
-        createdAt: updatedCertificate.createdAt
-      }
+      certificate: shape(updatedCertificate),
     })
   } catch (error) {
     console.error('Error updating certificate:', error)
@@ -119,16 +163,22 @@ export async function PUT(
   }
 }
 
-// DELETE - Delete certificate
+// DELETE - Delete certificate (admin only)
 export async function DELETE(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const guard = await requirePermission('certificate:manage')
+  if (guard.error) return guard.error
+
   try {
-    const { id } = await params
+    const id = await resolveId(params)
+    if (!id) {
+      return NextResponse.json({ success: false, message: 'Certificate not found' }, { status: 404 })
+    }
 
     await connectToDatabase()
-    
+
     const certificate = await Certificate.findByIdAndDelete(id)
 
     if (!certificate) {

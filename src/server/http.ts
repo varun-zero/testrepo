@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import mongoose from 'mongoose';
 
 /**
  * Standard API response envelope helpers. Every route should return through
@@ -15,9 +16,12 @@ export function fail(code: string, message: string, status = 400): NextResponse 
 /** Maps unexpected errors to a safe response without leaking internals. */
 export function handleRouteError(error: unknown): NextResponse {
   console.error('[api] error:', error);
+  const msg = error instanceof Error ? error.message : '';
   if (
-    error instanceof Error &&
-    (error.message.includes('ETIMEOUT') || error.message.includes('ECONNREFUSED'))
+    msg.includes('ETIMEOUT') ||
+    msg.includes('ECONNREFUSED') ||
+    msg.includes('timed out') ||
+    (error instanceof mongoose.Error && mongoose.connection.readyState !== 1)
   ) {
     return fail('DB_UNAVAILABLE', 'Database connection failed. Please try again.', 503);
   }

@@ -1,10 +1,16 @@
 import { NextRequest } from 'next/server';
+import { z } from 'zod';
 import { requirePermission } from '@/lib/rbac';
 import { ok, fail, handleRouteError } from '@/server/http';
 import { getSettings, updateSettings } from '@/server/services/settingsService';
 import { recordAudit } from '@/server/services/auditService';
 import type { Permission } from '@/config/permissions';
 import type { SettingsScope } from '@/models/Settings';
+
+const settingsPatchSchema = z.record(
+  z.string().min(1).max(100),
+  z.union([z.string().max(2000), z.number(), z.boolean(), z.null()])
+);
 
 function resolve(scope: string): { scope: SettingsScope; perm: Permission } | null {
   if (scope === 'business') return { scope: 'business', perm: 'settings:business' };
@@ -33,10 +39,11 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ sc
   if (guard.error) return guard.error;
   try {
     const body = await req.json();
-    if (typeof body !== 'object' || body === null) {
-      return fail('VALIDATION', 'Body must be an object of settings', 422);
+    const parsed = settingsPatchSchema.safeParse(body);
+    if (!parsed.success) {
+      return fail('VALIDATION', 'Body must be an object of primitive settings values', 422);
     }
-    const updated = await updateSettings(r.scope, body as Record<string, unknown>, guard.ctx.userId);
+    const updated = await updateSettings(r.scope, parsed.data, guard.ctx.userId);
     await recordAudit({
       actorId: guard.ctx.userId,
       actorRole: guard.ctx.role,

@@ -21,18 +21,31 @@ export default function DynamicRegistrationFormPayment({
   const [fileName, setFileName] = useState<string>("");
   const [zoomQr, setZoomQr] = useState(false);
 
-  const displayUpi = upiId || "8108359566@kotakbank";
-  const displayQr = qrCodeUrl || "/assests/jishantqr.png";
+  const hasUpi = Boolean(upiId);
+  const hasQr = Boolean(qrCodeUrl);
+  const paymentConfigured = hasUpi || hasQr;
 
   const copyUpi = () => {
-    navigator.clipboard.writeText(displayUpi);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    if (!upiId) return;
+    navigator.clipboard
+      .writeText(upiId)
+      .then(() => setCopied(true))
+      .catch(() => setCopied(false))
+      .finally(() => setTimeout(() => setCopied(false), 2000));
   };
+
+  const MAX_SCREENSHOT_BYTES = 5 * 1024 * 1024;
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      if (file.size > MAX_SCREENSHOT_BYTES) {
+        setFileName("");
+        setScreenshotPreview(null);
+        e.target.value = "";
+        alert("Screenshot must be under 5MB. Please choose a smaller image.");
+        return;
+      }
       setFileName(file.name);
       if (file.type.startsWith("image/")) {
         const reader = new FileReader();
@@ -67,8 +80,10 @@ export default function DynamicRegistrationFormPayment({
           )}
         </div>
 
+        {paymentConfigured ? (
         <div className="grid grid-cols-1 md:grid-cols-12 gap-5 sm:gap-6 items-center">
           {/* Left: Scannable QR Code Image */}
+          {hasQr && (
           <div className="md:col-span-5 flex flex-col items-center justify-center p-4 bg-purple-950/25 border border-purple-500/35 rounded-2xl shadow-inner group relative">
             <div
               onClick={() => setZoomQr(true)}
@@ -76,7 +91,7 @@ export default function DynamicRegistrationFormPayment({
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src={displayQr}
+                src={qrCodeUrl ?? ""}
                 alt="Payment QR Code"
                 className="w-40 h-40 sm:w-48 sm:h-48 object-contain rounded-xl"
                 onError={(e) => {
@@ -93,8 +108,10 @@ export default function DynamicRegistrationFormPayment({
               <QrCode className="w-3.5 h-3.5 flex-shrink-0 text-pink-400" /> Scan with GPay, PhonePe, Paytm, or BHIM
             </p>
           </div>
+          )}
 
           {/* Right: UPI Copy & Payment Steps */}
+          {hasUpi && (
           <div className="md:col-span-7 space-y-4">
             <div className="space-y-1.5">
               <label className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-purple-200/80 block">
@@ -102,7 +119,7 @@ export default function DynamicRegistrationFormPayment({
               </label>
               <div className="flex flex-col sm:flex-row sm:items-center gap-2 bg-white/[0.07] border border-purple-400/35 rounded-xl p-2.5 focus-within:border-purple-400 transition-all shadow-inner">
                 <span className="font-mono text-xs sm:text-sm md:text-base text-purple-100 font-black px-2 flex-1 break-all sm:truncate">
-                  {displayUpi}
+                  {upiId}
                 </span>
                 <button
                   type="button"
@@ -132,7 +149,17 @@ export default function DynamicRegistrationFormPayment({
               </ol>
             </div>
           </div>
+          )}
         </div>
+        ) : (
+          <div className="bg-amber-950/30 border border-amber-400/40 rounded-xl p-5 text-center space-y-2">
+            <p className="text-sm font-extrabold text-amber-200">Payment details not yet configured</p>
+            <p className="text-xs text-white/70">
+              The organizers have not published payment instructions for this event. Please complete your
+              registration and our team will contact you with payment steps.
+            </p>
+          </div>
+        )}
       </div>
 
       {/* 2. Payment Verification Form Fields (Transaction ID & Payment Screenshot) */}
@@ -205,14 +232,14 @@ export default function DynamicRegistrationFormPayment({
       </div>
 
       {/* QR Modal Zoom */}
-      {zoomQr && (
+      {zoomQr && qrCodeUrl && (
         <div
           onClick={() => setZoomQr(false)}
           className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 cursor-pointer"
         >
           <div className="bg-white p-5 rounded-3xl max-w-xs sm:max-w-sm w-full text-center shadow-[0_0_50px_rgba(168,85,247,0.5)] border border-purple-300/40 space-y-3" onClick={(e) => e.stopPropagation()}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={displayQr} alt="Payment QR Code Large" className="w-full max-h-72 sm:max-h-80 object-contain mx-auto rounded-2xl" />
+            <img src={qrCodeUrl} alt="Payment QR Code Large" className="w-full max-h-72 sm:max-h-80 object-contain mx-auto rounded-2xl" />
             <p className="text-xs text-zinc-800 font-black">Scan with any UPI app to pay ₹{fee}</p>
             <button
               type="button"

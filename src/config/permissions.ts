@@ -63,14 +63,6 @@ export const RolePermissions: Record<Role, Permission[]> = {
 /** Returns true if the given role is granted the given permission. */
 export function can(role: Role, permission: Permission): boolean {
   if (!role) return false;
-  const roleStr = String(role).toUpperCase().replace(/-/g, '_');
-  const perms = RolePermissions[roleStr as Role] || RolePermissions[role];
-  if (perms) {
-    return perms.includes(permission);
-  }
-  // Fallback for legacy / standard admin strings
-  if (roleStr === 'ADMIN' || roleStr === 'SUPERADMIN' || roleStr === 'FACULTY_ADMIN') {
-    return true;
-  }
-  return false;
+  const perms = RolePermissions[role];
+  return perms ? perms.includes(permission) : false;
 }

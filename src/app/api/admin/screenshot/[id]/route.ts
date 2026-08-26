@@ -41,13 +41,20 @@ export async function GET(
         status: 200,
         headers: {
           'Content-Type': mime,
-          'Cache-Control': 'public, max-age=31536000',
+          // Private: authenticated payment proofs must never be cached by
+          // shared/CDN caches and served to unauthenticated users.
+          'Cache-Control': 'private, max-age=3600',
         },
       });
     }
 
-    // Fallback: old path-based screenshots
-    return NextResponse.redirect(new URL(screenshot, req.url));
+    // Fallback: old path-based screenshots. Only same-origin relative paths
+    // are allowed; absolute or protocol-relative URLs are rejected to prevent
+    // an open redirect through this endpoint.
+    if (/^(https?:)?\/\//i.test(screenshot) || screenshot.includes('..')) {
+      return NextResponse.json({ error: 'Unsupported screenshot reference' }, { status: 400 });
+    }
+    return NextResponse.redirect(new URL(screenshot.replace(/^\/+/, '/'), req.url));
   } catch (error: unknown) {
     console.error('Screenshot API Error:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });

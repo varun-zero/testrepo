@@ -1,9 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
 import { connectToDatabase } from '@/lib/mongodb'
 import { rateLimit } from '@/lib/rate-limit'
+import { requirePermission } from '@/lib/rbac'
 import Certificate from '@/models/Certificate'
 
-// GET - Search certificate by email
+const createSchema = z.object({
+  name: z.string().trim().min(1).max(200),
+  product: z.string().trim().min(1).max(200),
+  email: z.string().trim().email().max(320),
+  certificateNumber: z.string().trim().min(1).max(100),
+  date: z.union([z.string(), z.number()]),
+})
+
+// GET - Public certificate verification lookup by email.
+// Read-only and rate-limited; all write access requires `certificate:manage`.
 export async function GET(req: NextRequest) {
   try {
     // Rate limit lookups: 30 per 10 minutes per IP
@@ -13,17 +24,18 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url)
     const email = searchParams.get('email')
 
-    if (!email) {
+    const parsedEmail = z.string().trim().email().max(320).safeParse(email)
+    if (!parsedEmail.success) {
       return NextResponse.json(
-        { success: false, message: 'Email parameter is required' },
+        { success: false, message: 'A valid email parameter is required' },
         { status: 400 }
       )
     }
 
     await connectToDatabase()
-    
-    const certificate = await Certificate.findOne({ 
-      email: email.toLowerCase().trim() 
+
+    const certificate = await Certificate.findOne({
+      email: parsedEmail.data.toLowerCase()
     }).sort({ createdAt: -1 })
 
     if (!certificate) {
@@ -62,29 +74,30 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// POST - Create new certificate
+// POST - Create new certificate (admin only)
 export async function POST(req: NextRequest) {
+  const guard = await requirePermission('certificate:manage')
+  if (guard.error) return guard.error
+
   try {
     // Rate limit creation: 10 per 10 minutes per IP
     const limited = await rateLimit(req, { name: 'certificate-create', limit: 10, windowMs: 10 * 60 * 1000 })
     if (limited) return limited
 
-    const data = await req.json()
-    const { name, product, email, certificateNumber, date } = data
-
-    // Validate required fields
-    if (!name || !product || !email || !certificateNumber || !date) {
+    const parsed = createSchema.safeParse(await req.json())
+    if (!parsed.success) {
       return NextResponse.json(
-        { success: false, message: 'All fields are required' },
+        { success: false, message: 'Invalid certificate payload', issues: parsed.error.flatten().fieldErrors },
         { status: 400 }
       )
     }
+    const { name, product, email, certificateNumber, date } = parsed.data
 
     await connectToDatabase()
-    
+
     // Check if certificate already exists
-    const existingCertificate = await Certificate.findOne({ 
-      certificateNumber 
+    const existingCertificate = await Certificate.findOne({
+      certificateNumber
     })
 
     if (existingCertificate) {
@@ -97,9 +110,9 @@ export async function POST(req: NextRequest) {
     // Create new certificate
     const certificate = new Certificate({
       certificateNumber,
-      name: name.trim(),
-      product: product.trim(),
-      email: email.toLowerCase().trim(),
+      name,
+      product,
+      email: email.toLowerCase(),
       date,
       status: 'generated'
     })
@@ -127,3 +140,5 @@ export async function POST(req: NextRequest) {
     )
   }
 }
+
+

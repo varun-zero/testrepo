@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { connectToDatabase } from '@/lib/mongodb';
 import Message from '@/models/Message';
 import { requirePermission } from '@/lib/rbac';
+import { escapeRegExp } from '@/lib/sanitize';
 import { getPagination, paginated, handleRouteError } from '@/server/http';
 import type { FilterQuery } from 'mongoose';
 import type { IMessage } from '@/models/Message';
@@ -19,7 +20,7 @@ export async function GET(req: NextRequest) {
 
     const filter: FilterQuery<IMessage> = {};
     if (search) {
-      const re = new RegExp(search, 'i');
+      const re = new RegExp(escapeRegExp(search.slice(0, 200)), 'i');
       filter.$or = [{ name: re }, { email: re }];
     }
 

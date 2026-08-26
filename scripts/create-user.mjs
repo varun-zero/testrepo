@@ -141,12 +141,13 @@ async function main() {
       isActive: true,
     });
 
+    // Never echo the password back — it is visible in the command history
+    // of whoever invoked this script and in CI logs.
     console.log(`
 ✔ Successfully created new admin user:
    - Email: ${cleanEmail}
    - Name:  ${name}
    - Role:  ${role}
-   - Pass:  ${password}
 `);
   }
 }

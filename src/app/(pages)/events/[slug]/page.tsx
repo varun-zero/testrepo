@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { getPublishedEventBySlug } from '@/server/services/eventService';
 import { SectionRenderer, type PublicEventView, type SectionType } from '@/components/events/dynamic/SectionRenderer';
 import { APP_CONFIG } from '@/lib/constants';
+import { safeJsonLd } from '@/lib/jsonld';
 
 const DEFAULT_SECTIONS: SectionType[] = ['hero', 'about', 'schedule', 'gallery', 'sponsors', 'faq', 'register'];
 
@@ -100,7 +101,7 @@ export default async function DynamicEventPage({ params }: { params: Promise<{ s
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(eventJsonLd) }}
+        dangerouslySetInnerHTML={{ __html: safeJsonLd(eventJsonLd) }}
       />
       <main className="min-h-full w-full pt-24 pb-20">
         {sections.map((type, i) => (

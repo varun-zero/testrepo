@@ -16,7 +16,6 @@ function getTransporter() {
     return null;
   }
 
-  // Remove spaces from Gmail app passwords if present (e.g. "yhhe cigq yetd oyno" -> "yhhecigqyetcoyno")
   pass = pass.replace(/\s+/g, '');
 
   return nodemailer.createTransport({
@@ -25,9 +24,21 @@ function getTransporter() {
     secure: port === 465,
     auth: { user, pass },
     tls: {
-      rejectUnauthorized: false,
+      // TLS certificate verification stays on unless explicitly disabled
+      // (e.g. for a self-signed internal relay) via SMTP_ALLOW_INSECURE_TLS=1.
+      rejectUnauthorized: process.env.SMTP_ALLOW_INSECURE_TLS !== '1',
     },
   });
+}
+
+/** Escapes user-controlled text before interpolating it into HTML emails. */
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
 export async function sendEmail({ to, subject, html }: EmailOptions): Promise<boolean> {
@@ -79,9 +90,9 @@ export async function sendRegistrationSubmissionEmail({
       </div>
 
       <div style="background-color: #161626; border: 1px solid #334155; padding: 25px; border-radius: 12px;">
-        <h2 style="color: #ffffff; font-size: 20px; margin-top: 0;">Hello ${name},</h2>
+        <h2 style="color: #ffffff; font-size: 20px; margin-top: 0;">Hello ${escapeHtml(name)},</h2>
         <p style="color: #cbd5e1; font-size: 15px; line-height: 1.6;">
-          Your registration for <strong style="color: #c084fc;">${eventTitle}</strong> (Squad: <strong style="color: #38bdf8;">${squadName}</strong>) has been successfully received and is currently under review by our admin team.
+          Your registration for <strong style="color: #c084fc;">${escapeHtml(eventTitle)}</strong> (Squad: <strong style="color: #38bdf8;">${escapeHtml(squadName)}</strong>) has been successfully received and is currently under review by our admin team.
         </p>
         <p style="color: #cbd5e1; font-size: 14px; line-height: 1.6;">
           We are verifying your submission and payment proof. You will receive an official confirmation email once your squad is approved.
@@ -123,9 +134,9 @@ export async function sendRegistrationApprovedEmail({
       </div>
 
       <div style="background-color: #161626; border: 1px solid #059669; padding: 25px; border-radius: 12px;">
-        <h2 style="color: #ffffff; font-size: 20px; margin-top: 0;">Congratulations ${name}!</h2>
+        <h2 style="color: #ffffff; font-size: 20px; margin-top: 0;">Congratulations ${escapeHtml(name)}!</h2>
         <p style="color: #cbd5e1; font-size: 15px; line-height: 1.6;">
-          Your squad <strong style="color: #38bdf8;">${squadName}</strong> has been <strong style="color: #34d399;">OFFICIALLY APPROVED</strong> for <strong style="color: #c084fc;">${eventTitle}</strong>!
+          Your squad <strong style="color: #38bdf8;">${escapeHtml(squadName)}</strong> has been <strong style="color: #34d399;">OFFICIALLY APPROVED</strong> for <strong style="color: #c084fc;">${escapeHtml(eventTitle)}</strong>!
         </p>
         <div style="background-color: #064e3b; border: 1px solid #10b981; padding: 15px; border-radius: 8px; margin: 20px 0; text-align: center;">
           <p style="color: #a7f3d0; font-weight: bold; margin: 0; font-size: 16px;">Status: APPROVED & CONFIRMED ✓</p>
@@ -179,15 +190,15 @@ export async function sendRegistrationRejectedEmail({
       </div>
 
       <div style="background-color: #161626; border: 1px solid #dc2626; padding: 25px; border-radius: 12px;">
-        <h2 style="color: #ffffff; font-size: 20px; margin-top: 0;">Hello ${name},</h2>
+        <h2 style="color: #ffffff; font-size: 20px; margin-top: 0;">Hello ${escapeHtml(name)},</h2>
         <p style="color: #cbd5e1; font-size: 15px; line-height: 1.6;">
-          Regrettably, your registration for squad <strong style="color: #38bdf8;">${squadName}</strong> for <strong style="color: #c084fc;">${eventTitle}</strong> could not be approved at this time.
+          Regrettably, your registration for squad <strong style="color: #38bdf8;">${escapeHtml(squadName)}</strong> for <strong style="color: #c084fc;">${escapeHtml(eventTitle)}</strong> could not be approved at this time.
         </p>
         ${
           reason
             ? `<div style="background-color: #450a0a; border: 1px solid #ef4444; padding: 15px; border-radius: 8px; margin: 20px 0;">
                 <p style="color: #f87171; font-weight: bold; margin: 0 0 5px 0; font-size: 14px;">Reason / Admin Note:</p>
-                <p style="color: #fca5a5; margin: 0; font-size: 14px; line-height: 1.5;">${reason}</p>
+                <p style="color: #fca5a5; margin: 0; font-size: 14px; line-height: 1.5;">${escapeHtml(reason)}</p>
                </div>`
             : ''
         }
