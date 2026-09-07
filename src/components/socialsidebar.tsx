@@ -32,7 +32,7 @@ export default function SocialSidebar() {
     { 
       id: "email",
       icon: SiGmail, 
-      href: "mailto:nsdc@vcet.edu.in", 
+      href: "https://mail.google.com/mail/?view=cm&fs=1&to=nsdc@vcet.edu.in", 
       label: "Email",
       color: "", // Colored via SVG gradient
       glowClass: "hover:shadow-[0_0_20px_rgba(255,107,107,0.6)] border-red-400/40 shadow-[0_0_12px_rgba(255,107,107,0.3)] hover:bg-red-500/10",

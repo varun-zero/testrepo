@@ -91,7 +91,9 @@ export function Footer() {
             <div className="w-16 h-0.5 bg-purple-400 mb-6"></div>
             <div className="space-y-4">
               <motion.a
-                href={`mailto:${CONTACT_INFO.email}`}
+                href={`https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(CONTACT_INFO.email)}`}
+                target="_blank"
+                rel="noopener noreferrer"
                 className="flex items-center space-x-3 text-gray-300 hover:text-gray-100 transition-colors duration-200 group"
                 whileHover={{ scale: 1.05 }}
                 transition={{ type: 'spring', stiffness: 300 }}

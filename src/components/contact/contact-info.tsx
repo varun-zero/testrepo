@@ -36,7 +36,9 @@ export function ContactInfo() {
             <span className="font-medium">Chairperson</span>:&nbsp;
             <a 
               className="underline hover:text-primary-light transition-colors" 
-              href={`mailto:${CONTACT_INFO.chairperson}`}
+              href={`https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(CONTACT_INFO.chairperson)}`}
+              target="_blank"
+              rel="noopener noreferrer"
             >
               {CONTACT_INFO.chairperson}
             </a>
@@ -46,7 +48,9 @@ export function ContactInfo() {
             <span className="font-medium">Secretary</span>:&nbsp;
             <a 
               className="underline hover:text-primary-light transition-colors" 
-              href={`mailto:${CONTACT_INFO.secretary}`}
+              href={`https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(CONTACT_INFO.secretary)}`}
+              target="_blank"
+              rel="noopener noreferrer"
             >
               {CONTACT_INFO.secretary}
             </a>
@@ -56,7 +60,9 @@ export function ContactInfo() {
             <span className="font-medium">NSDC</span>:&nbsp;
             <a 
               className="underline hover:text-primary-light transition-colors" 
-              href={`mailto:${CONTACT_INFO.email}`}
+              href={`https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(CONTACT_INFO.email)}`}
+              target="_blank"
+              rel="noopener noreferrer"
             >
               {CONTACT_INFO.email}
             </a>

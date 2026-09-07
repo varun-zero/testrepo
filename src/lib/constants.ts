@@ -54,7 +54,7 @@ export const NAVIGATION = {
     { label: 'Instagram', href: 'https://instagram.com/vcet_nsdc', icon: 'instagram' },
     { label: 'LinkedIn', href: 'https://linkedin.com/company/vcet-nsdc', icon: 'linkedin' },
     { label: 'YouTube', href: 'https://youtube.com/@vcet_nsdc', icon: 'youtube' },
-    { label: 'Email', href: 'mailto:nsdc@vcet.edu.in', icon: 'mail' },
+    { label: 'Email', href: 'https://mail.google.com/mail/?view=cm&fs=1&to=nsdc@vcet.edu.in', icon: 'mail' },
   ],
 } as const;
 
